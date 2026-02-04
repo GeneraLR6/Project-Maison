@@ -33,28 +33,13 @@ const Admin = (() => {
     })();
 
     // ============================================
-    // LOAD DATA IMMEDIATELY (localStorage = cache rapide)
-    // ============================================
-    (function() {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                Object.assign(PROJECT_DATA, parsed);
-            } catch (e) {
-                console.warn('Erreur chargement données:', e);
-            }
-        }
-    })();
-
-    // ============================================
     // INIT
     // ============================================
 
     function init() {
         initToggle();
         injectAdminButtons();
-        // Charger depuis Firebase (async, écrase le localStorage si plus récent)
+        // Charger depuis Firebase (async, met a jour si des donnees en ligne existent)
         loadFromFirebase();
     }
 
