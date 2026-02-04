@@ -1225,7 +1225,4 @@ const Admin = (() => {
     };
 })();
 
-// Init admin after DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-    Admin.init();
-});
+// Admin.init() est appele depuis app.js apres renderAllSections()

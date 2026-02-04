@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
     renderAllSections();
     initCharts();
     updateLastDate();
+    // Init admin APRES le rendu pour que les boutons s'injectent correctement
+    Admin.init();
 });
 
 // ============================================
