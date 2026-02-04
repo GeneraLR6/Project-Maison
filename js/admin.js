@@ -13,9 +13,27 @@ const Admin = (() => {
     const HISTORY_KEY = 'project_maison_history';
     const HISTORY_MAX = 50;
     let confirmCallback = null;
+    let firebaseDB = null;
 
     // ============================================
-    // LOAD DATA IMMEDIATELY (before DOMContentLoaded)
+    // FIREBASE INIT
+    // ============================================
+    (function() {
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhoiXkXSiwGHjEQvDwAVGT1b35Relsovk",
+            authDomain: "projet-maison-4b4a1.firebaseapp.com",
+            databaseURL: "https://projet-maison-4b4a1-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "projet-maison-4b4a1",
+            storageBucket: "projet-maison-4b4a1.firebasestorage.app",
+            messagingSenderId: "1016709684736",
+            appId: "1:1016709684736:web:7a52d8f8e66612fff002e5"
+        };
+        firebase.initializeApp(firebaseConfig);
+        firebaseDB = firebase.database();
+    })();
+
+    // ============================================
+    // LOAD DATA IMMEDIATELY (localStorage = cache rapide)
     // ============================================
     (function() {
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -36,6 +54,8 @@ const Admin = (() => {
     function init() {
         initToggle();
         injectAdminButtons();
+        // Charger depuis Firebase (async, écrase le localStorage si plus récent)
+        loadFromFirebase();
     }
 
     function initToggle() {
@@ -59,11 +79,37 @@ const Admin = (() => {
     }
 
     // ============================================
-    // STORAGE
+    // STORAGE (localStorage + Firebase)
     // ============================================
 
     function saveToStorage() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(PROJECT_DATA));
+        // Sync to Firebase
+        if (firebaseDB) {
+            firebaseDB.ref('projectData').set(PROJECT_DATA).catch(err => {
+                console.warn('Erreur sauvegarde Firebase:', err);
+            });
+        }
+    }
+
+    function loadFromFirebase() {
+        if (!firebaseDB) return;
+        firebaseDB.ref('projectData').once('value').then(snapshot => {
+            const data = snapshot.val();
+            if (data) {
+                Object.assign(PROJECT_DATA, data);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(PROJECT_DATA));
+                // Re-render avec les données Firebase
+                renderAllSections();
+                Object.values(Chart.instances).forEach(instance => instance.destroy());
+                initCharts();
+                injectAdminButtons();
+            }
+        }).catch(err => {
+            console.warn('Erreur chargement Firebase:', err);
+        });
+        // Charger aussi l'historique
+        loadHistoryFromFirebase();
     }
 
     function save(description) {
@@ -105,11 +151,33 @@ const Admin = (() => {
             history.length = HISTORY_MAX;
         }
         localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+        // Sync history to Firebase
+        if (firebaseDB) {
+            firebaseDB.ref('history').set(history).catch(err => {
+                console.warn('Erreur sauvegarde historique Firebase:', err);
+            });
+        }
+    }
+
+    function loadHistoryFromFirebase() {
+        if (!firebaseDB) return;
+        firebaseDB.ref('history').once('value').then(snapshot => {
+            const data = snapshot.val();
+            if (data) {
+                localStorage.setItem(HISTORY_KEY, JSON.stringify(data));
+                renderHistorique();
+            }
+        }).catch(err => {
+            console.warn('Erreur chargement historique Firebase:', err);
+        });
     }
 
     function clearHistory() {
         confirm('Vider l\'historique', 'Tout l\'historique des modifications sera supprimé.', () => {
             localStorage.removeItem(HISTORY_KEY);
+            if (firebaseDB) {
+                firebaseDB.ref('history').remove();
+            }
             renderHistorique();
             toast('Historique vidé', 'success');
         });
@@ -191,6 +259,10 @@ const Admin = (() => {
     function resetData() {
         confirm('Réinitialiser les données', 'Toutes vos modifications seront perdues. Les données d\'exemple seront restaurées.', () => {
             localStorage.removeItem(STORAGE_KEY);
+            if (firebaseDB) {
+                firebaseDB.ref('projectData').remove();
+                firebaseDB.ref('history').remove();
+            }
             location.reload();
         });
     }
