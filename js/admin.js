@@ -15,11 +15,25 @@ const Admin = (() => {
     let confirmCallback = null;
 
     // ============================================
+    // LOAD DATA IMMEDIATELY (before DOMContentLoaded)
+    // ============================================
+    (function() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                Object.assign(PROJECT_DATA, parsed);
+            } catch (e) {
+                console.warn('Erreur chargement données:', e);
+            }
+        }
+    })();
+
+    // ============================================
     // INIT
     // ============================================
 
     function init() {
-        loadFromStorage();
         initToggle();
         injectAdminButtons();
     }
@@ -47,18 +61,6 @@ const Admin = (() => {
     // ============================================
     // STORAGE
     // ============================================
-
-    function loadFromStorage() {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                Object.assign(PROJECT_DATA, parsed);
-            } catch (e) {
-                console.warn('Erreur chargement données:', e);
-            }
-        }
-    }
 
     function saveToStorage() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(PROJECT_DATA));
