@@ -10,6 +10,8 @@
 
 const Admin = (() => {
     const STORAGE_KEY = 'project_maison_data';
+    const HISTORY_KEY = 'project_maison_history';
+    const HISTORY_MAX = 50;
     let confirmCallback = null;
 
     // ============================================
@@ -62,8 +64,11 @@ const Admin = (() => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(PROJECT_DATA));
     }
 
-    function save() {
+    function save(description) {
         saveToStorage();
+        if (description) {
+            addHistoryEntry(description);
+        }
         // Re-render everything
         renderAllSections();
         // Destroy old charts and reinit
@@ -73,6 +78,79 @@ const Admin = (() => {
         // Re-inject admin buttons
         injectAdminButtons();
         toast('Modifications enregistrées', 'success');
+    }
+
+    // ============================================
+    // HISTORIQUE
+    // ============================================
+
+    function getHistory() {
+        try {
+            return JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function addHistoryEntry(description) {
+        const history = getHistory();
+        history.unshift({
+            date: new Date().toISOString(),
+            description: description,
+        });
+        // Limit to HISTORY_MAX entries (FIFO)
+        if (history.length > HISTORY_MAX) {
+            history.length = HISTORY_MAX;
+        }
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    }
+
+    function clearHistory() {
+        confirm('Vider l\'historique', 'Tout l\'historique des modifications sera supprimé.', () => {
+            localStorage.removeItem(HISTORY_KEY);
+            renderHistorique();
+            toast('Historique vidé', 'success');
+        });
+    }
+
+    function renderHistorique() {
+        const container = document.getElementById('historiqueList');
+        if (!container) return;
+        const history = getHistory();
+
+        if (history.length === 0) {
+            container.innerHTML = '<p class="historique-empty"><i class="fas fa-info-circle"></i> Aucune modification enregistrée.</p>';
+            return;
+        }
+
+        let html = '';
+        history.forEach(entry => {
+            const d = new Date(entry.date);
+            const dateStr = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+            const timeStr = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            html += `
+                <div class="historique-item">
+                    <div class="historique-dot"></div>
+                    <div class="historique-content">
+                        <div class="historique-date">${dateStr} à ${timeStr}</div>
+                        <div class="historique-desc">${entry.description}</div>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    function injectHistoriqueButtons() {
+        const section = document.getElementById('section-historique');
+        if (section && !section.querySelector('.btn-add')) {
+            const list = document.getElementById('historiqueList');
+            if (list) {
+                list.insertAdjacentHTML('beforebegin',
+                    `<button class="btn-add" onclick="Admin.clearHistory()" style="border-color: var(--danger); color: var(--danger);"><i class="fas fa-trash"></i> Vider l'historique</button>`
+                );
+            }
+        }
     }
 
     // ============================================
@@ -98,7 +176,7 @@ const Admin = (() => {
             try {
                 const data = JSON.parse(e.target.result);
                 Object.assign(PROJECT_DATA, data);
-                save();
+                save('Import de donnees');
                 toast('Données importées avec succès', 'success');
             } catch (err) {
                 toast('Fichier JSON invalide', 'error');
@@ -181,6 +259,7 @@ const Admin = (() => {
         injectMateriauxButtons();
         injectEnergieButtons();
         injectJournalButtons();
+        injectHistoriqueButtons();
     }
 
     // --- Helper: create an edit button ---
@@ -264,7 +343,7 @@ const Admin = (() => {
             g.surfaceTerrain = parseFloat(document.getElementById('f_terrain').value);
             g.nombrePieces = parseInt(document.getElementById('f_pieces').value);
             g.localisation = document.getElementById('f_localisation').value;
-            save();
+            save('Modification des informations generales');
         });
     }
 
@@ -287,7 +366,7 @@ const Admin = (() => {
                 titre: item.querySelector('[data-field=titre]').value,
                 description: item.querySelector('[data-field=description]').value,
             }));
-            save();
+            save('Modification des objectifs');
         });
     }
 
@@ -346,7 +425,7 @@ const Admin = (() => {
             d.apres.classe = document.getElementById('f_dpe_apres_classe').value;
             d.apres.consommation = parseFloat(document.getElementById('f_dpe_apres_conso').value);
             d.apres.ges = parseFloat(document.getElementById('f_dpe_apres_ges').value);
-            save();
+            save('Modification du DPE');
         });
     }
 
@@ -407,7 +486,7 @@ const Admin = (() => {
                 montant: parseFloat(item.querySelector('[data-field=montant]').value) || 0,
                 notes: item.querySelector('[data-field=notes]').value,
             }));
-            save();
+            save('Modification des couts d acquisition');
         });
     }
 
@@ -485,7 +564,7 @@ const Admin = (() => {
                 mensualite: parseFloat(b.querySelector('[data-field=mensualite]').value) || 0,
                 details: {},
             }));
-            save();
+            save('Modification du financement');
         });
     }
 
@@ -572,7 +651,7 @@ const Admin = (() => {
             a.montantRecu = parseFloat(document.getElementById('f_aide_recu').value) || 0;
             a.conditions = document.getElementById('f_aide_conditions').value;
             a.details = document.getElementById('f_aide_details').value;
-            save();
+            save('Modification de l aide: ' + a.nom);
         });
     }
 
@@ -586,14 +665,15 @@ const Admin = (() => {
             conditions: '',
             details: '',
         });
-        save();
+        save('Ajout d une aide');
         editAide(PROJECT_DATA.aides.length - 1);
     }
 
     function deleteAide(idx) {
-        confirm('Supprimer cette aide', `"${PROJECT_DATA.aides[idx].nom}" sera supprimée.`, () => {
+        const nom = PROJECT_DATA.aides[idx].nom;
+        confirm('Supprimer cette aide', `"${nom}" sera supprimée.`, () => {
             PROJECT_DATA.aides.splice(idx, 1);
-            save();
+            save('Suppression de l aide: ' + nom);
         });
     }
 
@@ -689,7 +769,7 @@ const Admin = (() => {
                 nom: item.querySelector('[data-field=nom]').value,
                 statut: item.querySelector('[data-field=statut]').value,
             }));
-            save();
+            save('Modification du poste: ' + t.nom);
         });
     }
 
@@ -721,14 +801,15 @@ const Admin = (() => {
             dateFin: new Date().toISOString().slice(0, 10),
             soustaches: [],
         });
-        save();
+        save('Ajout d un poste de travaux');
         editTravail(PROJECT_DATA.travaux.length - 1);
     }
 
     function deleteTravail(idx) {
-        confirm('Supprimer ce poste', `"${PROJECT_DATA.travaux[idx].nom}" sera supprimé.`, () => {
+        const nom = PROJECT_DATA.travaux[idx].nom;
+        confirm('Supprimer ce poste', `"${nom}" sera supprimé.`, () => {
             PROJECT_DATA.travaux.splice(idx, 1);
-            save();
+            save('Suppression du poste: ' + nom);
         });
     }
 
@@ -793,7 +874,7 @@ const Admin = (() => {
             m.prixUnitaire = parseFloat(document.getElementById('f_mat_pu').value) || 0;
             m.prixTotal = parseFloat(document.getElementById('f_mat_pt').value) || 0;
             m.statut = document.getElementById('f_mat_statut').value;
-            save();
+            save('Modification du materiau: ' + m.nom);
         });
     }
 
@@ -807,14 +888,15 @@ const Admin = (() => {
             prixTotal: 0,
             statut: 'devis',
         });
-        save();
+        save('Ajout d un materiau');
         editMateriau(PROJECT_DATA.materiaux.length - 1);
     }
 
     function deleteMateriau(idx) {
-        confirm('Supprimer ce matériau', `"${PROJECT_DATA.materiaux[idx].nom}" sera supprimé.`, () => {
+        const nom = PROJECT_DATA.materiaux[idx].nom;
+        confirm('Supprimer ce matériau', `"${nom}" sera supprimé.`, () => {
             PROJECT_DATA.materiaux.splice(idx, 1);
-            save();
+            save('Suppression du materiau: ' + nom);
         });
     }
 
@@ -861,7 +943,7 @@ const Admin = (() => {
                 if (key) newData[key] = val;
             });
             PROJECT_DATA.energie.economies = newData;
-            save();
+            save('Modification des economies d energie');
         });
     }
 
@@ -900,7 +982,7 @@ const Admin = (() => {
                 if (key) newData[key] = val;
             });
             PROJECT_DATA.energie.valeur = newData;
-            save();
+            save('Modification de l impact sur la valeur');
         });
     }
 
@@ -974,7 +1056,7 @@ const Admin = (() => {
             j.problemes = Array.from(document.querySelectorAll('#probList .form-list-item input')).map(i => i.value).filter(Boolean);
             j.solutions = Array.from(document.querySelectorAll('#solList .form-list-item input')).map(i => i.value).filter(Boolean);
             j.lecons = Array.from(document.querySelectorAll('#lecList .form-list-item input')).map(i => i.value).filter(Boolean);
-            save();
+            save('Modification de l entree journal: ' + j.titre);
         });
     }
 
@@ -988,14 +1070,15 @@ const Admin = (() => {
             solutions: [],
             lecons: [],
         });
-        save();
+        save('Ajout d une entree au journal');
         editJournal(0);
     }
 
     function deleteJournal(idx) {
-        confirm('Supprimer cette entrée', `"${PROJECT_DATA.journal[idx].titre}" sera supprimée.`, () => {
+        const titre = PROJECT_DATA.journal[idx].titre;
+        confirm('Supprimer cette entrée', `"${titre}" sera supprimée.`, () => {
             PROJECT_DATA.journal.splice(idx, 1);
-            save();
+            save('Suppression de l entree journal: ' + titre);
         });
     }
 
@@ -1076,6 +1159,10 @@ const Admin = (() => {
         addJournal,
         deleteJournal,
         addListItem,
+
+        // Historique
+        renderHistorique,
+        clearHistory,
     };
 })();
 

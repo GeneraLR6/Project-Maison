@@ -1728,3 +1728,78 @@ body.admin-mode .data-actions {
     gap: 10px;
     justify-content: center;
 }
+
+/* ============================================
+   HISTORIQUE
+   ============================================ */
+.historique-timeline {
+    position: relative;
+    padding-left: 28px;
+}
+
+.historique-timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--border);
+}
+
+.historique-item {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 12px 0;
+}
+
+.historique-item:not(:last-child) {
+    border-bottom: none;
+}
+
+.historique-dot {
+    position: absolute;
+    left: -24px;
+    top: 16px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--primary);
+    border: 2px solid var(--bg-card);
+    box-shadow: 0 0 0 2px var(--primary);
+    flex-shrink: 0;
+}
+
+.historique-content {
+    flex: 1;
+    padding: 10px 16px;
+    background: #f8fafc;
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--primary);
+}
+
+.historique-date {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.historique-desc {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.historique-empty {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 40px 20px;
+    font-size: 14px;
+}
+
+.historique-empty i {
+    margin-right: 6px;
+}

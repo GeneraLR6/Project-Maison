@@ -77,6 +77,7 @@ function initNavigation() {
                 budget: 'Suivi budgétaire',
                 energie: 'Performance énergétique',
                 journal: 'Journal de chantier',
+                historique: 'Historique des modifications',
             };
             document.getElementById('pageTitle').textContent = titles[section] || section;
 
@@ -128,6 +129,7 @@ function renderAllSections() {
     renderBudget();
     renderEnergie();
     renderJournal();
+    renderHistorique();
 }
 
 // ============================================
@@ -1038,4 +1040,12 @@ function initCharts() {
             }
         }
     });
+}
+
+// ============================================
+// HISTORIQUE
+// ============================================
+
+function renderHistorique() {
+    Admin.renderHistorique();
 }
