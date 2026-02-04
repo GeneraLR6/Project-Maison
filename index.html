@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projet Maison - Suivi de Rénovation</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <nav id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-home"></i>
+                <span>Projet Maison</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarClose">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item active" data-section="dashboard">
+                <i class="fas fa-th-large"></i><span>Tableau de bord</span>
+            </li>
+            <li class="nav-item" data-section="presentation">
+                <i class="fas fa-info-circle"></i><span>Présentation</span>
+            </li>
+            <li class="nav-item" data-section="achat">
+                <i class="fas fa-key"></i><span>Achat immobilier</span>
+            </li>
+            <li class="nav-item" data-section="financement">
+                <i class="fas fa-university"></i><span>Financement</span>
+            </li>
+            <li class="nav-item" data-section="aides">
+                <i class="fas fa-hand-holding-usd"></i><span>Aides & Subventions</span>
+            </li>
+            <li class="nav-item" data-section="travaux">
+                <i class="fas fa-hard-hat"></i><span>Travaux</span>
+            </li>
+            <li class="nav-item" data-section="materiaux">
+                <i class="fas fa-boxes"></i><span>Matériaux</span>
+            </li>
+            <li class="nav-item" data-section="budget">
+                <i class="fas fa-chart-pie"></i><span>Suivi budgétaire</span>
+            </li>
+            <li class="nav-item" data-section="energie">
+                <i class="fas fa-leaf"></i><span>Performance énergétique</span>
+            </li>
+            <li class="nav-item" data-section="journal">
+                <i class="fas fa-book"></i><span>Journal de chantier</span>
+            </li>
+        </ul>
+        <div class="data-actions">
+            <button class="btn btn-primary" onclick="Admin.exportData()"><i class="fas fa-download"></i> Exporter</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()"><i class="fas fa-upload"></i> Importer</button>
+            <input type="file" id="importFile" accept=".json" style="display:none" onchange="Admin.importData(event)">
+            <button class="btn btn-danger" onclick="Admin.resetData()"><i class="fas fa-undo"></i> Reset</button>
+        </div>
+        <div class="sidebar-footer">
+            <div class="project-progress">
+                <div class="progress-label">
+                    <span>Avancement global</span>
+                    <span id="globalProgress">35%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="globalProgressBar" style="width: 35%"></div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+        <!-- Top Bar -->
+        <header class="topbar">
+            <button class="sidebar-toggle" id="sidebarOpen">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="topbar-title">
+                <h1 id="pageTitle">Tableau de bord</h1>
+            </div>
+            <div class="topbar-actions">
+                <span class="last-update"><i class="fas fa-clock"></i> Mis à jour : <span id="lastUpdate"></span></span>
+                <div class="admin-toggle" id="adminToggle">
+                    <span class="admin-toggle-label">Admin</span>
+                    <div class="toggle-switch" id="toggleSwitch"></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ============================================ -->
+        <!-- SECTION: DASHBOARD -->
+        <!-- ============================================ -->
+        <section id="section-dashboard" class="content-section active">
+            <!-- KPI Cards -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-icon blue"><i class="fas fa-euro-sign"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Budget total</span>
+                        <span class="kpi-value" id="kpiBudgetTotal">--</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon green"><i class="fas fa-receipt"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Dépensé</span>
+                        <span class="kpi-value" id="kpiDepense">--</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon orange"><i class="fas fa-balance-scale"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Reste à dépenser</span>
+                        <span class="kpi-value" id="kpiReste">--</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon purple"><i class="fas fa-ruler-combined"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Coût au m²</span>
+                        <span class="kpi-value" id="kpiCoutM2">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Répartition du budget par poste</h3>
+                    </div>
+                    <div class="card-body chart-container">
+                        <canvas id="chartBudgetRepartition"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Prévisionnel vs Réel</h3>
+                    </div>
+                    <div class="card-body chart-container">
+                        <canvas id="chartPrevVsReel"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline + Progress -->
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Avancement des travaux</h3>
+                    </div>
+                    <div class="card-body" id="dashboardProgress">
+                        <!-- Generated by JS -->
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Évolution des dépenses</h3>
+                    </div>
+                    <div class="card-body chart-container">
+                        <canvas id="chartDepensesEvolution"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Journal -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Dernières entrées du journal</h3>
+                </div>
+                <div class="card-body" id="dashboardJournal">
+                    <!-- Generated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================ -->
+        <!-- SECTION: PRESENTATION -->
+        <!-- ============================================ -->
+        <section id="section-presentation" class="content-section">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header"><h3><i class="fas fa-home"></i> La maison</h3></div>
+                    <div class="card-body">
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Type de bien</span>
+                                <span class="info-value" id="presType">--</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Année de construction</span>
+                                <span class="info-value" id="presAnnee">--</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Surface habitable</span>
+                                <span class="info-value" id="presSurface">--</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Surface terrain</span>
+                                <span class="info-value" id="presTerrain">--</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Nombre de pièces</span>
+                                <span class="info-value" id="presPieces">--</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Localisation</span>
+                                <span class="info-value" id="presLocalisation">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><h3><i class="fas fa-bullseye"></i> Objectifs de la rénovation</h3></div>
+                    <div class="card-body">
+                        <div class="objectives-list" id="presObjectifs">
+                            <!-- Generated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DPE Before/After -->
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-bolt"></i> Classe énergétique</h3></div>
+                <div class="card-body">
+                    <div class="dpe-comparison">
+                        <div class="dpe-block">
+                            <h4>Avant rénovation</h4>
+                            <div class="dpe-badge dpe-before" id="dpeAvant">F</div>
+                            <span class="dpe-label">Passoire thermique</span>
+                        </div>
+                        <div class="dpe-arrow"><i class="fas fa-arrow-right"></i></div>
+                        <div class="dpe-block">
+                            <h4>Objectif après rénovation</h4>
+                            <div class="dpe-badge dpe-after" id="dpeApres">B</div>
+                            <span class="dpe-label">Bâtiment performant</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-calendar-alt"></i> Timeline globale du projet</h3></div>
+                <div class="card-body">
+                    <div class="timeline" id="presTimeline">
+                        <!-- Generated by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================ -->
+        <!-- SECTION: ACHAT -->
+        <!-- ============================================ -->
+        <section id="section-achat" class="content-section">
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-icon blue"><i class="fas fa-home"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Prix d'achat</span>
+                        <span class="kpi-value" id="achatPrix">--</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon green"><i class="fas fa-file-contract"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Frais de notaire</span>
+                        <span class="kpi-value" id="achatNotaire">--</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon orange"><i class="fas fa-handshake"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Frais d'agence</span>
+                        <span class="kpi-value" id="achatAgence">--</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon purple"><i class="fas fa-calculator"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Coût total projet</span>
+                        <span class="kpi-value" id="achatTotal">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-file-invoice-dollar"></i> Détail des coûts d'acquisition</h3></div>
+                <div class="card-body">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Poste</th>
+                                <th>Montant</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="achatTableBody">
+                            <!-- Generated by JS -->
+                        </tbody>
+                        <tfoot id="achatTableFoot">
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-chart-pie"></i> Répartition du coût total</h3></div>
+                <div class="card-body chart-container-sm">
+                    <canvas id="chartAchat"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================ -->
+        <!-- SECTION: FINANCEMENT -->
+        <!-- ============================================ -->
+        <section id="section-financement" class="content-section">
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-icon blue"><i class="fas fa-piggy-bank"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Apport personnel</span>
+                        <span class="kpi-value" id="finApport">--</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon green"><i class="fas fa-university"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Total emprunté</span>
+                        <span class="kpi-value" id="finEmprunte">--</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon orange"><i class="fas fa-calendar-check"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Mensualité totale</span>
+                        <span class="kpi-value" id="finMensualite">--</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon purple"><i class="fas fa-percentage"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Taux d'endettement</span>
+                        <span class="kpi-value" id="finEndettement">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Credit details -->
+            <div class="grid-2">
+                <div class="card" id="creditPrincipalCard">
+                    <div class="card-header"><h3><i class="fas fa-university"></i> Crédit immobilier principal</h3></div>
+                    <div class="card-body">
+                        <div class="info-grid" id="creditPrincipalInfo">
+                            <!-- Generated by JS -->
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><h3><i class="fas fa-hand-holding-usd"></i> PTZ - Prêt à Taux Zéro</h3></div>
+                    <div class="card-body">
+                        <div class="info-grid" id="ptzInfo">
+                            <!-- Generated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header"><h3><i class="fas fa-leaf"></i> Éco-PTZ</h3></div>
+                    <div class="card-body">
+                        <div class="info-grid" id="ecoPtzInfo">
+                            <!-- Generated by JS -->
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><h3><i class="fas fa-plus-circle"></i> Prêts complémentaires</h3></div>
+                    <div class="card-body">
+                        <div class="info-grid" id="pretsCompInfo">
+                            <!-- Generated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recap Table -->
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-table"></i> Tableau récapitulatif des financements</h3></div>
+                <div class="card-body">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Type de financement</th>
+                                <th>Montant</th>
+                                <th>Taux</th>
+                                <th>Durée</th>
+                                <th>Mensualité</th>
+                            </tr>
+                        </thead>
+                        <tbody id="finRecapBody">
+                            <!-- Generated by JS -->
+                        </tbody>
+                        <tfoot id="finRecapFoot">
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-chart-pie"></i> Répartition du financement</h3></div>
+                <div class="card-body chart-container-sm">
+                    <canvas id="chartFinancement"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================ -->
+        <!-- SECTION: AIDES & SUBVENTIONS -->
+        <!-- ============================================ -->
+        <section id="section-aides" class="content-section">
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-icon green"><i class="fas fa-hand-holding-usd"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Total aides demandées</span>
+                        <span class="kpi-value" id="aidesTotalDemande">--</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon blue"><i class="fas fa-check-circle"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Total aides reçues</span>
+                        <span class="kpi-value" id="aidesTotalRecu">--</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon orange"><i class="fas fa-hourglass-half"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">En attente</span>
+                        <span class="kpi-value" id="aidesTotalAttente">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-list-alt"></i> Détail des aides et subventions</h3></div>
+                <div class="card-body">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Aide</th>
+                                <th>Organisme</th>
+                                <th>Montant demandé</th>
+                                <th>Montant reçu</th>
+                                <th>Statut</th>
+                                <th>Conditions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="aidesTableBody">
+                            <!-- Generated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Aide detail cards -->
+            <div id="aidesDetails">
+                <!-- Generated by JS -->
+            </div>
+        </section>
+
+        <!-- ============================================ -->
+        <!-- SECTION: TRAVAUX -->
+        <!-- ============================================ -->
+        <section id="section-travaux" class="content-section">
+            <!-- Filter Tabs -->
+            <div class="filter-tabs" id="travauxFilters">
+                <button class="filter-tab active" data-filter="all">Tous</button>
+                <button class="filter-tab" data-filter="isolation">Isolation</button>
+                <button class="filter-tab" data-filter="chauffage">Chauffage</button>
+                <button class="filter-tab" data-filter="electricite">Électricité</button>
+                <button class="filter-tab" data-filter="plomberie">Plomberie</button>
+                <button class="filter-tab" data-filter="menuiseries">Menuiseries</button>
+                <button class="filter-tab" data-filter="toiture">Toiture</button>
+                <button class="filter-tab" data-filter="finitions">Finitions</button>
+            </div>
+
+            <div id="travauxList">
+                <!-- Generated by JS -->
+            </div>
+        </section>
+
+        <!-- ============================================ -->
+        <!-- SECTION: MATERIAUX -->
+        <!-- ============================================ -->
+        <section id="section-materiaux" class="content-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-boxes"></i> Tableau des matériaux et équipements</h3>
+                    <div class="card-actions">
+                        <select id="materiauxFilter" class="select-filter">
+                            <option value="all">Toutes catégories</option>
+                            <option value="isolation">Isolation</option>
+                            <option value="chauffage">Chauffage</option>
+                            <option value="electricite">Électricité</option>
+                            <option value="plomberie">Plomberie</option>
+                            <option value="menuiseries">Menuiseries</option>
+                            <option value="toiture">Toiture</option>
+                            <option value="finitions">Finitions</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Matériau / Équipement</th>
+                                <th>Catégorie</th>
+                                <th>Fournisseur</th>
+                                <th>Quantité</th>
+                                <th>Prix unitaire</th>
+                                <th>Prix total</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody id="materiauxTableBody">
+                            <!-- Generated by JS -->
+                        </tbody>
+                        <tfoot id="materiauxTableFoot">
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Comparatifs -->
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-balance-scale"></i> Comparatifs de choix</h3></div>
+                <div class="card-body" id="comparatifs">
+                    <!-- Generated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================ -->
+        <!-- SECTION: BUDGET -->
+        <!-- ============================================ -->
+        <section id="section-budget" class="content-section">
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-icon blue"><i class="fas fa-file-invoice-dollar"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Budget prévisionnel</span>
+                        <span class="kpi-value" id="budgetPrev">--</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon green"><i class="fas fa-receipt"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Dépenses réelles</span>
+                        <span class="kpi-value" id="budgetReel">--</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon orange"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Écart total</span>
+                        <span class="kpi-value" id="budgetEcart">--</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon purple"><i class="fas fa-ruler-combined"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Coût réel au m²</span>
+                        <span class="kpi-value" id="budgetM2">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-table"></i> Suivi budgétaire par poste</h3></div>
+                <div class="card-body table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Poste</th>
+                                <th>Budget prévu</th>
+                                <th>Dépensé</th>
+                                <th>Écart</th>
+                                <th>% utilisé</th>
+                                <th>Progression</th>
+                            </tr>
+                        </thead>
+                        <tbody id="budgetTableBody">
+                            <!-- Generated by JS -->
+                        </tbody>
+                        <tfoot id="budgetTableFoot">
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header"><h3>Répartition des dépenses réelles</h3></div>
+                    <div class="card-body chart-container">
+                        <canvas id="chartBudgetDoughnut"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><h3>Budget prévu vs réel par poste</h3></div>
+                    <div class="card-body chart-container">
+                        <canvas id="chartBudgetComparison"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================ -->
+        <!-- SECTION: ENERGIE -->
+        <!-- ============================================ -->
+        <section id="section-energie" class="content-section">
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-bolt"></i> Diagnostic de Performance Énergétique</h3></div>
+                <div class="card-body">
+                    <div class="dpe-full-comparison">
+                        <div class="dpe-side">
+                            <h4>AVANT rénovation</h4>
+                            <div class="dpe-scale" id="dpeScaleAvant">
+                                <!-- Generated by JS -->
+                            </div>
+                        </div>
+                        <div class="dpe-side">
+                            <h4>APRÈS rénovation (objectif)</h4>
+                            <div class="dpe-scale" id="dpeScaleApres">
+                                <!-- Generated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header"><h3><i class="fas fa-chart-line"></i> Estimation des économies d'énergie</h3></div>
+                    <div class="card-body">
+                        <div class="info-grid" id="energieEconomies">
+                            <!-- Generated by JS -->
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><h3><i class="fas fa-home"></i> Impact sur la valeur du bien</h3></div>
+                    <div class="card-body">
+                        <div class="info-grid" id="energieValeur">
+                            <!-- Generated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-chart-bar"></i> Consommation énergétique comparée</h3></div>
+                <div class="card-body chart-container">
+                    <canvas id="chartEnergie"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================ -->
+        <!-- SECTION: JOURNAL -->
+        <!-- ============================================ -->
+        <section id="section-journal" class="content-section">
+            <div class="journal-timeline" id="journalTimeline">
+                <!-- Generated by JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Modifier</h3>
+                <button class="modal-close" onclick="Admin.closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer" id="modalFooter">
+                <button class="btn btn-secondary" onclick="Admin.closeModal()">Annuler</button>
+                <button class="btn btn-primary" id="modalSave"><i class="fas fa-save"></i> Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Dialog -->
+    <div class="confirm-overlay" id="confirmOverlay">
+        <div class="confirm-box">
+            <h4 id="confirmTitle">Confirmer</h4>
+            <p id="confirmMsg">Êtes-vous sûr ?</p>
+            <div class="confirm-actions">
+                <button class="btn btn-secondary" onclick="Admin.closeConfirm()">Annuler</button>
+                <button class="btn btn-danger" id="confirmYes">Supprimer</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>
